@@ -6,6 +6,10 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: write
+
 env:
   # Zugangsdaten für AWS (geheim → Secrets)
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -48,3 +52,26 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           terraform show -no-color tfplan >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: Plan als PR-Kommentar
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            const plan = execSync('terraform show -no-color tfplan').toString();
+            const body = [
+              '### Terraform Plan',
+              '<details><summary>Plan anzeigen</summary>',
+              '',
+              '```',
+              plan.length > 60000 ? plan.slice(0, 60000) + '\n… (gekürzt)' : plan,
+              '```',
+              '</details>',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
