@@ -20,9 +20,11 @@ env:
   TF_IN_AUTOMATION: "true"
 
 jobs:
-  deploy:
-    name: Terraform Apply
+  plan:
+    name: Plan (Produktion)
     runs-on: ubuntu-latest
+    outputs:
+      aenderungen: ${{ steps.plan.outputs.aenderungen }}
     steps:
       - name: Code auschecken
         uses: actions/checkout@v5
@@ -36,7 +38,58 @@ jobs:
         run: terraform init -input=false
 
       - name: Plan
-        run: terraform plan -input=false -out=tfplan
+        id: plan
+        run: |
+          set +e
+          terraform plan -input=false -detailed-exitcode -out=tfplan
+          exitcode=$?
+          set -e
+          if [ "$exitcode" -eq 1 ]; then
+            exit 1
+          fi
+          if [ "$exitcode" -eq 2 ]; then
+            echo "aenderungen=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "aenderungen=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Plan in die Zusammenfassung schreiben
+        run: |
+          echo "## Terraform Plan (Produktion)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          terraform show -no-color tfplan >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Plan-Datei für den Apply-Job aufheben
+        if: steps.plan.outputs.aenderungen == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: tfplan
+          retention-days: 1
+
+  apply:
+    name: Apply (Produktion)
+    needs: plan
+    if: needs.plan.outputs.aenderungen == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v5
+
+      - name: Terraform installieren
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Init
+        run: terraform init -input=false
+
+      - name: Plan-Datei holen
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
 
       - name: Apply
         run: terraform apply -input=false tfplan
