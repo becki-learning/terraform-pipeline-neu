@@ -23,3 +23,8 @@ output "instance_id" {
   description = "Die Instanz-ID der Instanz"
   value       = aws_instance.server.id
 }
+
+output "webseite" {
+  description = "Adresse der Webseite"
+  value       = "http://${aws_instance.server.public_ip}"
+}
