@@ -14,13 +14,13 @@ terraform {
   # Remote Backend: Der State liegt dann in einem S3-Bucket statt auf
   # deinem Laptop. Wird erst in Aufgabe 7 einkommentiert!
   #
-   backend "s3" {
-     bucket       = "terraform-state-becki-42"
-     key          = "terraform-kurs/terraform.tfstate"
-     region       = "us-east-1"
-     encrypt      = true
-     use_lockfile = true
-   }
+  backend "s3" {
+    bucket       = "terraform-state-becki-42"
+    key          = "terraform-kurs/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
+  }
 }
 
 # ---------------------------------------------------------------
