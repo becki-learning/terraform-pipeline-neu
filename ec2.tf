@@ -22,6 +22,16 @@ resource "aws_vpc_security_group_ingress_rule" "ssh" {
   to_port           = 22
 }
 
+# Eingehend: HTTP (Port 80) von überall
+resource "aws_vpc_security_group_ingress_rule" "http" {
+  security_group_id = aws_security_group.server.id
+  description       = "HTTP"
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "tcp"
+  from_port         = 80
+  to_port           = 80
+}
+
 # Ausgehend: alles erlaubt (z. B. für apt update)
 resource "aws_vpc_security_group_egress_rule" "alles" {
   security_group_id = aws_security_group.server.id
@@ -53,6 +63,14 @@ resource "aws_instance" "server" {
   vpc_security_group_ids      = [aws_security_group.server.id]
   associate_public_ip_address = true
   key_name                    = var.key_name
+
+  user_data_replace_on_change = true
+  user_data                   = <<-EOF
+    #!/bin/bash
+    apt-get update
+    apt-get install -y nginx
+    echo "<h1>Hallo von ${var.vorname} - ausgerollt per Pipeline!</h1>" > /var/www/html/index.html
+  EOF
 
   tags = {
     Name       = "${var.vorname}-server"
