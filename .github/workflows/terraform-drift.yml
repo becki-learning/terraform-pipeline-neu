@@ -4,3 +4,31 @@ on:
   schedule:
     - cron: "0 6 * * 1-5"   # Mo–Fr um 06:00 UTC
   workflow_dispatch:
+
+# ↓ Dieser Block ist 1:1 aus terraform-ci.yml kopiert
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: us-east-1
+  TF_VAR_vorname: ${{ vars.VORNAME }}
+  TF_VAR_key_name: ${{ vars.KEY_NAME }}
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  drift:
+    name: Drift prüfen
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v5
+
+      - name: Terraform installieren
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Init
+        run: terraform init -input=false
+
+      - name: Drift prüfen
+        run: terraform plan -input=false -detailed-exitcode
