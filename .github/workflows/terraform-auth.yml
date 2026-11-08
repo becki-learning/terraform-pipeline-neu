@@ -6,13 +6,10 @@ on:
       - main
   workflow_dispatch:
 
-# NEU: Erlaubt dem Workflow, sich bei GitHub einen "Ausweis" (OIDC-Token) zu holen
-permissions:
-  id-token: write
-  contents: read
-
-# GEÄNDERT: Die zwei Secrets sind raus, nur die Region bleibt
+# Umgebungsvariablen für ALLE Jobs. Die Werte kommen aus den Secrets des Repositories.
 env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_REGION: us-east-1
 
 jobs:
@@ -23,12 +20,14 @@ jobs:
       - name: Code auschecken
         uses: actions/checkout@v5
 
-      # NEU: Holt mit dem Ausweis kurzlebige Zugangsdaten für die Rolle
-      - name: Bei AWS anmelden (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: us-east-1
+      - name: Sind die Zugangsdaten gesetzt?
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::AWS_ACCESS_KEY_ID oder AWS_SECRET_ACCESS_KEY fehlt – bitte als Secret hinterlegen!"
+            exit 1
+          fi
+          echo "Access Key ID: $AWS_ACCESS_KEY_ID"
+          echo "Region:        $AWS_REGION"
 
       - name: AWS CLI – wer bin ich?
         run: aws sts get-caller-identity
