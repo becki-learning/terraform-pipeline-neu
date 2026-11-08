@@ -12,5 +12,5 @@ variable "instance_type" {
 variable "key_name"        {
   description = "Name des Schlüsselpaars, das du in der AWS-Konsole angelegt hast"
   type        = string
-  default     = "<DEIN_SCHLUESSELPAAR_NAME>"
+  default     = "terraform-kurs-key"
 }
